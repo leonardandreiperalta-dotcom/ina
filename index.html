@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For Jenalyn - Sunflowers</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #050301; display: flex; justify-content: center; align-items: center; }
+        .text-overlay {
+            position: absolute; top: 12%; width: 100%; text-align: center;
+            color: #fff; font-family: 'Segoe UI', sans-serif; letter-spacing: 5px;
+            pointer-events: none; z-index: 10;
+        }
+        h1 { font-size: clamp(1.8rem, 8vw, 3.5rem); font-weight: 300; animation: glow 3s infinite alternate; }
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px #ffcc00; color: #fff; }
+            100% { text-shadow: 0 0 30px #ffaa00, 0 0 50px #ff8800; color: #ffeb3b; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="text-overlay"><h1>Happy Valentine's Jenalyn</h1></div>
+    <canvas id="garden"></canvas>
+
+    <script>
+        const canvas = document.getElementById('garden');
+        const ctx = canvas.getContext('2d');
+        let width, height, sunflowers = [], hearts = [];
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            sunflowers = [];
+            const count = 5;
+            for (let i = 0; i < count; i++) {
+                sunflowers.push({
+                    x: width / 2 + (i - (count-1)/2) * (width < 600 ? 90 : 180),
+                    len: height * 0.4 + Math.random() * 100,
+                    offset: Math.random() * Math.PI * 2,
+                    petalColor: "#ffcc00",
+                    diskColor: "#3b2211"
+                });
+            }
+            hearts = Array.from({length: 30}, () => ({
+                x: Math.random() * width, y: Math.random() * height,
+                size: Math.random() * 6 + 4, speed: Math.random() * 0.8 + 0.4
+            }));
+        }
+
+        function drawSunflower(x, y, petalCol, diskCol, bloom) {
+            ctx.save();
+            ctx.translate(x, y);
+            
+            const petalCount = 24;
+            const petalLen = 40 + (bloom * 20);
+            const petalWid = 12;
+            const diskRadius = 20 + (bloom * 5);
+
+            // Draw Petals (Two layers for realism)
+            for (let layer = 0; layer < 2; layer++) {
+                ctx.save();
+                ctx.rotate(layer * 0.15); // Offset second layer
+                for (let i = 0; i < petalCount; i++) {
+                    ctx.save();
+                    ctx.rotate((i * Math.PI * 2) / petalCount);
+                    
+                    const grad = ctx.createLinearGradient(0, 0, 0, -petalLen);
+                    grad.addColorStop(0, "#ff8800"); // Base of petal
+                    grad.addColorStop(0.5, petalCol);
+                    grad.addColorStop(1, "#ffee00"); // Tip of petal
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.bezierCurveTo(-petalWid, -petalLen/2, -petalWid/4, -petalLen, 0, -petalLen);
+                    ctx.bezierCurveTo(petalWid/4, -petalLen, petalWid, -petalLen/2, 0, 0);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+
+            // Draw Central Disk (The dark center)
+            ctx.beginPath();
+            ctx.arc(0, 0, diskRadius, 0, Math.PI * 2);
+            const diskGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, diskRadius);
+            diskGrad.addColorStop(0, "#5d3a1a");
+            diskGrad.addColorStop(1, diskCol);
+            ctx.fillStyle = diskGrad;
+            ctx.fill();
+
+            // Texture for the seeds
+            ctx.strokeStyle = "rgba(0,0,0,0.3)";
+            ctx.setLineDash([1, 3]);
+            ctx.beginPath();
+            ctx.arc(0, 0, diskRadius * 0.7, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function animate(time) {
+            ctx.fillStyle = "#050301";
+            ctx.fillRect(0, 0, width, height);
+
+            // Falling Golden Hearts
+            hearts.forEach(h => {
+                h.y += h.speed;
+                if (h.y > height) h.y = -20;
+                ctx.fillStyle = "rgba(255, 204, 0, 0.3)";
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, h.size/2, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            sunflowers.forEach(s => {
+                const sway = Math.sin(time * 0.001 + s.offset) * 25;
+                const bloom = (Math.sin(time * 0.0015 + s.offset) + 1) / 2;
+                const topX = s.x + sway;
+                const topY = height - s.len;
+
+                // Thick Stem
+                ctx.beginPath();
+                ctx.moveTo(s.x, height);
+                ctx.bezierCurveTo(s.x, height - s.len * 0.5, topX, height - s.len * 0.5, topX, topY);
+                ctx.strokeStyle = "#2d4d1a";
+                ctx.lineWidth = 8;
+                ctx.lineCap = "round";
+                ctx.stroke();
+
+                // Large Sunflower Leaves
+                [0.4, 0.7].forEach(pos => {
+                    ctx.save();
+                    ctx.translate(s.x + (topX - s.x) * pos, height - s.len * pos);
+                    ctx.rotate(sway * 0.01 + (pos > 0.5 ? 0.6 : -0.6));
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 10, 25, Math.PI/4, 0, Math.PI*2);
+                    ctx.fillStyle = "#2d4d1a";
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                drawSunflower(topX, topY, s.petalColor, s.diskColor, bloom);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', init);
+        init();
+        animate(0);
+    </script>
+</body>
+</html>
